@@ -1,0 +1,343 @@
+---
+title: "Exploratory Data Analysis"
+author: 'Authors: Somya Srivastava and Sowmya Sri P'
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+   
+```{r}
+library(tidyverse)
+library(Hmisc)
+library(ggplot2)
+library(ggstatsplot)
+```
+
+# Introduction
+
+### Dataset used: [Predict Test Scores of students](https://www.kaggle.com/kwadwoofosu/predict-test-scores-of-students)
+
+### Link to github repository:- [https://github.com/1NT18IS155/Exploratory-Data-Analysis](https://github.com/1NT18IS155/Exploratory-Data-Analysis)
+
+   
+We have explored the data in various ways, and on most of the columns separately as well, using tidyverse. We have visualised the same using various graphs using ggplot2 mostly. We have further visualised the correlation between the pre test scores of students vs the post test scores, and have also plotted a best-fit line for same. Using this, we can even predict the approximate marks a student will score post test, if pre test scores are known.
+   
+Firstly, we shall be loading our data set in the R-Studio project environment using the _read.csv_ command.   
+Using the **head()** function, we can view the first few rows of the dataset, where **kable()** function helps us to view it in a concise format.   
+
+
+```{r}
+mydata = read.csv("./test_scores.csv")
+head(mydata) %>% knitr::kable()
+```
+We can get an idea of over all dataset using the following functions:   
+
+* **str()** - It states the dimensions of the dataset used, and its datatype. In this case we have a _2133*11_ dimensioned data, of _data.frame_ type.It also gives the names of all columns, their datatypes and a few of the values from respective columns.   
+* **summary()** - It gives us an idea about the data in each column. For categorical columns, it gives name,length,class and datatype, whereas for numerical columns, it gives insights on the quartile values and ranges, and the mean, median, minimum and maximum values in the respective columns.   
+* **class()** - It gives the datatype of the data which is provided to it.   
+* **length()** - It gives the number of columns in the data.   
+* **names()** - It gives the names of all the columns.   
+
+```{r}
+str(mydata)
+```
+
+```{r}
+summary(mydata)
+```
+
+```{r}
+class(mydata)
+```
+
+```{r}
+length(mydata)
+```
+
+```{r}
+names(mydata)
+```
+
+# School
+
+We are grouping the dataset by school names to find the number of students studying for each school.
+
+```{r}
+school_count <- group_by(mydata,school) %>% count()
+school_count
+```
+
+```{r}
+school_count %>% ggplot(aes(x=school, y=n)) +
+  geom_bar(stat="identity", fill= "#f68060", alpha=0.6, width=0.7) +
+  coord_flip() +
+  theme_ggstatsplot() +
+  labs(y="Number of Students", x="Name of School", title = "                   Distribution of Students studying in each School")
+```
+
+We can infer from the bar plot that a school named "GOOBU" has the most students, whereas a school named "ANKYI" has the least number of students. This can be verified from following code cells, where we have arranged the schools in an ascending number of the count of students studying in them, and extracted the school name and count of the ones having minimum and maximum number of students.
+
+```{r}
+class(school_count)
+```
+
+```{r}
+count(mydata,school) %>% arrange(n) %>% head(1)
+```
+
+```{r}
+count(mydata,school) %>% arrange(n) %>% tail(1)
+```
+
+Here, we have displayed the data of all the students who are studying in a particular school named "ANKYI".
+
+```{r}
+mydata %>% filter(school == "ANKYI") %>% knitr::kable()
+```
+We have calculated the mean of the pretest and posttest scores of all the students belonging to each school.
+
+```{r}
+mean_school <- mydata %>% select(school,pretest,posttest) %>% group_by(school) %>% summarise(pretest_mean=mean(pretest), posttest_mean=mean(posttest))
+mean_school
+```
+
+
+```{r}
+mean_school %>% ggplot() + 
+  geom_segment(aes(x=school,xend=school,y=pretest_mean,yend=posttest_mean),color="grey") +
+  geom_point(aes(x=school,y=pretest_mean,color="pretest marks"))+
+  geom_point(aes(x=school,y=posttest_mean,color="posttest marks"))+
+  scale_color_manual(values = c("pretest marks"="red","posttest marks"="blue"))+
+  ggtitle("Pretest vs Posttest average marks comparison across Schools")+
+  xlab("School")+
+  ylab("Average Marks")+
+  coord_flip()+
+  theme_minimal()+
+  theme(
+    legend.title = element_blank()
+  )
+  
+
+```
+We have plotted a modified lollipop chart for the above mentioned and calculated data, from which we can infer the growth in scores of students from pre-test to post-test for each school.
+
+We can see that the students studying in school "FBUMG" have improved the most in scores. The average of this school has risen the most when compared to all the other schools.
+
+We can also see that school "VVTVA" had the least average score in pretest, whereas "KZKKE" has the least average in post-test scores. The school named "UKPGS" had outperformed all the other schools in both the pre-test and post-test scores.
+
+
+# School Setting
+
+We have calculated the number of students based on the locality of the school, and visualised the same using a pie chart.
+
+```{r}
+school_set <- group_by(mydata,school_setting) %>% count()
+school_set
+```
+
+```{r}
+school_set %>% count() %>% ggplot(aes(x="",y=c(school_set$n), fill=school_setting)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y",start=0) +
+  theme_void() +
+  labs(title= "Distribution of Students according to location") +
+  theme(legend.title=element_blank()) +
+  geom_text(aes(label=paste0(school_set$n," (",scales::percent(school_set$n/sum(school_set$n)),")")),position = position_stack(vjust=0.5)) +
+  scale_fill_brewer(palette="Pastel1")
+```
+We can infer that 42.5% of the total students study in Urban areas with a count of 906, 33.6% students study in Suburban areas, whereas 23.9% students study in Rural areas.
+
+We have further calculated the mean of pre-test and post-test scores of students according to the location of the school.
+```{r}
+mean_set <- mydata %>% select(school_setting,pretest,posttest) %>% group_by(school_setting) %>% summarise(pretest_set=mean(pretest), posttest_set=mean(posttest))
+mean_set
+```
+
+```{r}
+mean_set_tidy <- mean_set %>% pivot_longer(cols=c(pretest_set,posttest_set))
+mean_set_tidy
+```
+
+```{r}
+mean_set_tidy %>% ggplot(aes(fill=factor(name, levels = c('pretest_set','posttest_set')), x= school_setting, y=value)) +
+    geom_col(position = "dodge", width=0.7) +
+  labs(title= "Mean of test scores of students across different locations") +
+  theme_test() +
+  theme(legend.title = element_blank()) +
+  scale_fill_brewer(palette = "Pastel1")
+```
+We have plotted a grouped column chart for the same. We can infer that the students studying in Suburban areas have outperformed all the students studying in both Rural and Urban areas, both pre-test and post-test.
+
+
+# School type
+
+We have the grouprd the data in a way so that we can easily see the number of students going to each of public and non-public schools.
+```{r}
+type_school <- group_by(mydata,school_type) %>% count()
+type_school
+```
+
+
+```{r}
+type_school %>% ggplot(aes(x=school_type, y=n)) +
+  geom_bar(stat="identity", fill= "#f68060", alpha=0.6, width=0.4) +
+  coord_flip() +
+  theme_ggstatsplot() +
+  labs(y="Number of Students", x="School Type", title = "                   Number of Students studying in different School Types")
+```
+In the barplot with which we have visualised the above mentioned and calculated data, we can see that the number of students studying in public schools is approximately thrice the number of students studying in non-public schools.
+
+
+```{r}
+mean_type <- mydata %>% select(school_type,pretest,posttest) %>% group_by(school_type) %>% summarise(pretest_type=mean(pretest), posttest_type=mean(posttest))
+mean_type
+```
+
+```{r}
+mean_type_tidy <- mean_type %>% pivot_longer(cols=c(pretest_type,posttest_type))
+mean_type_tidy
+```
+
+```{r}
+mean_type_tidy %>% ggplot(aes(fill=factor(name, levels = c('pretest_type','posttest_type')), x= school_type, y=value)) +
+    geom_col(position = "dodge", width=0.7) +
+  labs(title= "Mean of test scores of students across different types of schools") +
+  theme_test() +
+  theme(legend.title = element_blank()) +
+  labs(x="School Type",y="Mean Score") +
+  scale_fill_brewer(palette = "Set2")
+```
+When plotting the mean of pre-test and post-test scores of students as per the type of school, we can see, that though the number of students in public schools is almost thrice of the students in non-public schools, still the students in non-public schools perform better.
+
+
+# Teaching Method
+
+We have tried to visualise and analyse the number of students undergoing different types of teaching methods, and its effects on the scoring capabilities of students.
+```{r}
+teaching <- group_by(mydata,teaching_method) %>% count()
+teaching
+```
+
+```{r}
+teaching %>% ggplot(aes(x=teaching_method, y=n)) +
+  geom_bar(stat="identity", fill= "#f68060", alpha=0.6, width=0.4) +
+  coord_flip() +
+  theme_ggstatsplot() +
+  labs(y="Number of Students", x="Teaching Method", title = "Distribution of Students undergoing different type of teaching methodologies")
+```
+We can see that the students undergoing standard teaching methodologies are approximately 1.7 times more in count than the ones undergoing experimental teaching.
+
+
+```{r}
+mean_teach <- mydata %>% select(teaching_method,pretest,posttest) %>% group_by(teaching_method) %>% summarise(pretest_teach=mean(pretest), posttest_teach=mean(posttest))
+mean_teach
+```
+
+```{r}
+mean_teach_tidy <- mean_teach %>% pivot_longer(cols=c(pretest_teach,posttest_teach))
+mean_teach_tidy
+```
+
+```{r}
+mean_teach_tidy %>% ggplot(aes(fill=factor(name, levels = c('pretest_teach','posttest_teach')), x= teaching_method, y=value)) +
+    geom_col(position = "dodge", width=0.7) +
+  labs(x="Teaching Method", y="Mean Score" , title= "Mean of test scores of students undergoing different teaching methodologies") +
+  theme_test() +
+  theme(legend.title = element_blank()) +
+  scale_fill_brewer(palette = "Pastel1")
+```
+We can further infer that experimental teaching provides better results than standard methods of teaching, and improvement in scores is also more in experimental, when compared across pre-test and post-test scores.
+
+
+# Gender
+
+We have tried to explore and visualise the gender distribution in schools.
+```{r}
+gender_st <- group_by(mydata,gender) %>% count()
+gender_st
+```
+
+```{r}
+genderwise_schoolwise <- mydata %>% select(school,gender) %>% group_by(school,gender) %>% count()
+genderwise_schoolwise
+```
+
+```{r}
+genderwise_schoolwise %>% ggplot(aes(x=school, y=n, fill=factor(gender, levels = c('Female','Male')))) +
+  geom_bar(stat="identity",width=0.7) +
+  coord_flip() +
+  theme_ggstatsplot() +
+  theme(legend.title = element_blank()) +
+  labs(x="School Name",y="Number of Students", title="Gender Distribution of students in each school") +
+  scale_fill_manual(values = c("lightsalmon","darkturquoise"))
+```
+In the above plotted stacked bar chart, we can visualise the gender distributioin over the total count of students in each school. We can see that gender distribution is very good and there is no bias for either of the 2 genders expressed in the data, for any of the schools, no matter where they are located or if they are public or non-public.
+
+# Pretest and Posttest
+
+We have explored the pre-test and post-test columns of the data sets. The **summary()** function provides us with each of the baisc details for each of them, such as minimum, maximum, quartiles, mean and median.
+```{r}
+summary(mydata$pretest)
+```
+
+```{r}
+summary(mydata$posttest)
+```
+
+
+```{r}
+pre_post <- mydata %>% select(pretest,posttest) %>% pivot_longer(cols=c(pretest,posttest))
+pre_post
+```
+
+
+```{r}
+pre_post %>% ggplot(aes(x=factor(name, levels = c('pretest','posttest')), y=value, fill=factor(name, levels = c('pretest','posttest')))) +
+  geom_violin() +
+  geom_boxplot(width=0.3) +
+  labs(x="",y="Marks", title="                                              Distribution of scores") +
+  theme_ggstatsplot() +
+  theme(legend.title = element_blank()) +
+  scale_fill_brewer(palette="Pastel1")
+```
+We have visualised the distribution of pre-test and post-test scores of students using a violin plot with a box-and-whisker plot. The whiskers are not visible, because we do not have any outliers in the data. Since the plot for post-test is shifted upwards when compared to the plot of pre-test, we can say that a high majority of the students have improved in marks from pre-test to post-test, resulting in shift of the distribution of marks overall.
+
+
+```{r}
+pre_post_scatter <- mydata %>% select(pretest,posttest)
+head(pre_post_scatter)
+```
+
+```{r}
+pre_post_scatter %>% ggplot(aes(x=pretest, y=posttest)) +
+  geom_point(color="#69b3a2") +
+  theme_ggstatsplot() +
+  geom_smooth(method=lm, color="red", fill="369b3a2", se=TRUE) +
+  labs(x="Prestest Score", y="Posttest Score", title="                        Correlation between Pretest and Posttest scores")
+```
+
+Since now we have an idea that students are improving their scores from pre-test to post-test, we have plotted a scatterplot to visualise the correlation between the two fields.
+We have further plotted the line of best fit to the distribution, using which, we can even make an approximate guess of how much a student will score in post-test if we have their pre-test scores known.
+
+# Conclusion
+
+After exploring a data of 2133 students, over 11 parameters(columns), we can say, many of the parameters make a difference to how well a student performs in pre-test, and their scope of improvement in pre-test score to post-test scores.
+
+* A student studying in sub-urban non-public school will perform better than the one studying in rural public schools. This could be because of many reasons, including facilities, but that is not of our concern in this Exploratory Data Analysis project.
+
+* No gender bias can be seen in schools.
+
+* And, experimental teaching methods result in better result an improvement when compared to traditional(standard) methods of teaching.
+
+* A high majority of the students' score improve in post-test from pre-test.
+
+
+
+
+   
+   
